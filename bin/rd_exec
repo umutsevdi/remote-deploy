@@ -1,0 +1,58 @@
+#!/bin/bash
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                       rd_exec - Remote Deploy Executor                       │
+# │       Executes given shell command(s) in the remote enviroment on the        │
+# │                             selected directory.                              │
+# └──────────────────────────────────────────────────────────────────────────────┘
+# @require ssh
+# @author umutsevdi
+
+# Set to default path if applet path is not defined
+[ "$RD_PATH" = "" ] && RD_PATH=$HOME/.config/rd
+[ `ls $RD_PATH` = "" ] && echo -e "error: deploy.config is missing at $RD_PATH. 
+Either define a deploy.config at $RD_PATH or define a custom \$RD_PATH at .bashrc" 1>&2 
+ 
+RD_USER=`grep "username" $RD_PATH/deploy.config | sed s/username=//`
+RD_ADR=`grep "address" $RD_PATH/deploy.config | sed s/address=//`
+RD_DIR=
+RD_CMD=
+
+Help()
+{
+   # Display Help
+   echo "rd_exec - Remote Deploy Executor"
+   echo "  Executes given shell command(s) in the remote" \
+       " enviroment on the selected directory."
+   echo
+   echo "Syntax: [-r]"
+   echo
+   echo "Options:"
+   echo "-h/--help      Prints this menu."
+   echo "-d/--dir [DIR]      Change target directory."
+   echo "-e/--exec [...CMD]      List of commands to execute."
+   echo
+}
+
+Exec()
+{
+    ssh -l ${RD_USER} ${RD_ADR} "cd ${RD_DIR}; ${RD_CMD}"
+}
+
+for arg in $@;do
+    if [ "$x" = true ]; then
+        RD_CMD+="$arg"
+    elif [ "$dir" = true ]; then
+        RD_DIR=$arg
+        dir=false
+    elif [ "$arg" = "-d" ] || [ "$arg" = "--dir" ]; then 
+        dir=true
+    elif [ "$arg" = "-e" ] || [ "$arg" = "--exec" ]; then 
+        x=true
+    elif [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
+        Help; exit
+    else
+        echo -e "Error: Invalid arguments" 1>&2; exit
+    fi 
+done
+[ "$RD_DIR" = "" ] && RD_DIR=$HOME
+Exec
