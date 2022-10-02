@@ -75,6 +75,10 @@ $ln -s /path/to/remote-deploy /usr/local/bin
 
 You are ready to go! You can now run any script.
 
+</section>
+
+<section id="contact">
+
 ## 3- Contact
 
 You can contact to me for any suggestion or information.
