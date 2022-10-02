@@ -7,7 +7,7 @@
 # @require ssh
 # @author umutsevdi
 
-# Set to default path if applet path is not defined
+# Set to default path if remote deploy config path is not defined
 [ "$RD_PATH" = "" ] && RD_PATH=$HOME/.config/rd
 [ `ls $RD_PATH` = "" ] && echo -e "error: deploy.config is missing at $RD_PATH. 
 Either define a deploy.config at $RD_PATH or define a custom \$RD_PATH at .bashrc" 1>&2 
@@ -21,8 +21,8 @@ Help()
 {
    # Display Help
    echo "rd_exec - Remote Deploy Executor"
-   echo "  Executes given shell command(s) in the remote" \
-       " enviroment on the selected directory."
+   echo -e "  Executes given shell command(s) in the remote" \
+       "\nenviroment on the selected directory."
    echo
    echo "Syntax: [-r]"
    echo

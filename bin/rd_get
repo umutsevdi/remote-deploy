@@ -1,0 +1,102 @@
+#!/bin/bash
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                       rd_exec - Remote Deploy Get                            │
+# │       Executes given shell command(s) in the remote enviroment on the        │
+# │                             selected directory.                              │
+# └──────────────────────────────────────────────────────────────────────────────┘
+# @require ssh, sftp
+# @author umutsevdi
+
+# Set to default path if remote deploy config path is not defined
+[ "$RD_PATH" = "" ] && RD_PATH=$HOME/.config/rd
+[ `ls $RD_PATH` = "" ] && echo -e "error: deploy.config is missing at $RD_PATH. 
+Either define a deploy.config at $RD_PATH or define a custom \$RD_PATH at .bashrc" 1>&2 
+ 
+RD_USER=`grep "username" $RD_PATH/deploy.config | sed s/username=//`
+RD_ADR=`grep "address" $RD_PATH/deploy.config | sed s/address=//`
+RD_DIR=
+SRC_DIR=
+DEST_DIR=
+IS_FORCED=false
+
+Help()
+{
+   # Display Help
+   echo "rd_exec - Remote Deploy Get"
+   echo -e "  Fetches the differences between remote and local directory" \
+       "\nrecursively downloads changed files ."
+   echo
+   echo "Syntax: [-r]"
+   echo
+   echo "Options:"
+   echo "-h/--help           Prints this menu."
+   echo "-s/--src [DIR]      Local directory to update."
+   echo "-d/--dest [DIR]     Remote directory to pull files from."
+   echo "-f/--forced         Pulls all files instead of changed ones."
+   echo
+}
+
+SelectiveGet()
+{
+    # DEST FILES
+    for i in `find $DEST_DIR -type f`; do
+        echo -e "$i\t`date +%s -r $i`";
+    done > /tmp/dif_dest
+
+    # SRC FILES
+    ssh -l ${RD_USER} ${RD_ADR} "
+    for i in `find $SRC_DIR -type f`; do
+        echo -e "$i\t`date +%s -r $i`";
+    done > /tmp/dif_src"
+
+#       sftp -r ${RD_USER}@${RD_ADR} << 'END'
+#           for i in `find -type f`; do
+#               echo -e "$i\t`date +%s -r $i`";
+#           done > /tmp/dif
+#           get /tmp/dif
+#           quit
+#   END
+
+#       sftp -r ${RD_USER}@${RD_ADR} << 'END'
+#           get SSD1306_OLED_RPI-1.2/*
+#           quit
+#   END
+#       ssh -l ${RD_USER} ${RD_ADR} "cd ${RD_DIR}; ${RD_FILES}"
+}
+
+BlindGet()
+{
+    sftp -r ${RD_USER}@${RD_ADR} <<< "get $SRC_DIR $DEST_DIR"
+}
+
+for arg in $@;do
+    if [ "$dest" = true ]; then
+        DEST_DIR=$arg
+        dest=false
+    elif [ "$src" = true ]; then
+        SRC_DIR=$arg
+        src=false
+    elif [ "$arg" = "-s" ] || [ "$arg" = "--src" ]; then 
+        src=true
+    elif [ "$arg" = "-d" ] || [ "$arg" = "--dest" ]; then 
+        dest=true
+    elif [ "$arg" = "-f" ] || [ "$arg" = "--forced" ]; then 
+        IS_FORCED=true
+    elif [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
+        Help; exit
+    else
+        echo -e "Error: Invalid arguments" 1>&2; exit
+    fi 
+
+done
+
+# Skip download if the target directory is missing
+if  [ "$SRC_DIR" = "" ]; then
+    echo -e "Error: Missing arguments. Please add source and target directories" 1>&2; exit
+fi
+
+# Replace empty source directory with $HOME
+[ "$DEST_DIR" = "" ] && DEST_DIR=\$HOME
+
+[ "$IS_FORCED" = true ] && BlindGet \
+    || SelectiveGet 
