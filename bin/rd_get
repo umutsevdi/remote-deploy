@@ -1,8 +1,8 @@
 #!/bin/bash
 # ┌──────────────────────────────────────────────────────────────────────────────┐
-# │                       rd_exec - Remote Deploy Get                            │
-# │       Executes given shell command(s) in the remote enviroment on the        │
-# │                             selected directory.                              │
+# │                        rd_get - Remote Deploy Get                            │
+# │       Pulls files from selected directory on a remote enviroment on the      │
+# │          When smart pull is enabled, updates only older the files.           │
 # └──────────────────────────────────────────────────────────────────────────────┘
 # @require ssh, sftp
 # @author umutsevdi
@@ -24,7 +24,7 @@ Help()
    # Display Help
    echo "rd_exec - Remote Deploy Get"
    echo -e "  Fetches the differences between remote and local directory" \
-       "\nrecursively downloads changed files ."
+       "\nrecursively downloads changed files."
    echo
    echo "Syntax: [-r]"
    echo
@@ -32,22 +32,22 @@ Help()
    echo "-h/--help           Prints this menu."
    echo "-s/--src [DIR]      Local directory to update."
    echo "-d/--dest [DIR]     Remote directory to pull files from."
-   echo "-f/--forced         Pulls all files instead of changed ones."
+   echo "-f/--forced         Pulls all files instead of the changed ones."
    echo
 }
 
-SelectiveGet()
+SmartGet()
 {
     # DEST FILES
     for i in `find $DEST_DIR -type f`; do
-        echo -e "$i\t`date +%s -r $i`";
+        echo -e "`date +%s -r $i`\t$i";
     done > /tmp/dif_dest
 
-    # SRC FILES
-    ssh -l ${RD_USER} ${RD_ADR} "
-    for i in `find $SRC_DIR -type f`; do
-        echo -e "$i\t`date +%s -r $i`";
-    done > /tmp/dif_src"
+    sftp ${RD_USER}@${RD_ADR} << 'END'
+        put /tmp/dif_dest /tmp/dif_dest
+        echo "<shared>::$DEST_DIR $SRC_DIR::</shared>"
+END
+    rm /tmp/dif_dest
 
 #       sftp -r ${RD_USER}@${RD_ADR} << 'END'
 #           for i in `find -type f`; do
@@ -98,5 +98,4 @@ fi
 # Replace empty source directory with $HOME
 [ "$DEST_DIR" = "" ] && DEST_DIR=\$HOME
 
-[ "$IS_FORCED" = true ] && BlindGet \
-    || SelectiveGet 
+[ "$IS_FORCED" = true ] && BlindGet || SmartGet
